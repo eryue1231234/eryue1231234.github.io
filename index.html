@@ -1,0 +1,541 @@
+
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>夏雪个人网页 | 古地图探索</title>
+<style>
+:root{
+  --paper:#EFE4D4;
+  --cold:#C7D5E8;
+  --ink:#23180f;
+  --drawer:66.666vw;
+  font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;color:var(--ink);background:#18140f}
+button{font:inherit}
+.app{position:relative;width:100vw;height:100vh;background:linear-gradient(135deg,#efe4d4,#c7d5e8 52%,#efe4d4)}
+.map-viewport{position:absolute;inset:0;overflow:hidden;cursor:grab;touch-action:none;transition:width .55s ease,filter .55s ease}
+.map-viewport.dragging{cursor:grabbing}
+.app.detail-open .map-viewport{width:33.334vw;filter:saturate(.75) contrast(.9) blur(.4px)}
+.map-world{position:absolute;left:50%;top:50%;width:2100px;height:1260px;transform-origin:center;will-change:transform}
+.map-paper{position:absolute;inset:0;overflow:hidden;background:radial-gradient(circle at 20% 18%,rgba(255,255,245,.35),transparent 22%),radial-gradient(circle at 70% 55%,rgba(199,213,232,.25),transparent 25%),repeating-linear-gradient(0deg,rgba(45,31,16,.05) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,rgba(45,31,16,.035) 0 1px,transparent 1px 58px),linear-gradient(120deg,#EFE4D4,#C7D5E8 50%,#EFE4D4);box-shadow:inset 0 0 140px rgba(38,24,12,.32)}
+.map-paper:before{content:"";position:absolute;inset:34px;border:3px double rgba(53,31,13,.32);border-radius:10px;pointer-events:none}
+.map-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.coast{fill:rgba(239,228,212,.28);stroke:rgba(43,29,15,.48);stroke-width:5}
+.coast-thin,.sketch{fill:none;stroke:rgba(43,29,15,.42);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.route{fill:none;stroke:rgba(35,24,15,.62);stroke-width:4;stroke-linecap:round;stroke-dasharray:8 15;animation:routeFlow 16s linear infinite}
+@keyframes routeFlow{to{stroke-dashoffset:-260}}
+.map-title{position:absolute;z-index:12;top:34px;left:50%;transform:translateX(-50%);font-size:32px;font-weight:700;letter-spacing:8px;color:rgba(31,20,12,.86)}
+.region-label{position:absolute;color:rgba(34,23,13,.48);font-size:38px;font-weight:700;letter-spacing:2px;transform:rotate(-4deg);pointer-events:none}
+.r1{left:780px;top:408px}.r2{left:1150px;top:660px}.r3{left:1450px;top:348px}.r4{left:620px;top:845px}
+.node{position:absolute;z-index:15;width:185px;height:185px;border:0;border-radius:50%;padding:0;background:transparent;cursor:pointer;transform:translate(-50%,-50%);display:grid;place-items:center;transition:transform .22s ease}
+.node:before,.node:after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+.node:before{inset:0;background:radial-gradient(circle at 46% 40%,rgba(255,249,221,.92),rgba(239,228,212,.76) 55%,rgba(199,213,232,.52));border:3px solid rgba(255,249,223,.66);box-shadow:0 12px 26px rgba(45,29,12,.30),0 0 0 5px rgba(199,213,232,.28)}
+.node:after{inset:-12px;border:2px solid rgba(199,213,232,.72);border-left-color:transparent;animation:haloSpin 8s linear infinite}
+@keyframes haloSpin{to{transform:rotate(360deg)}}
+.node .inner{position:relative;z-index:2;width:148px;height:148px;border-radius:50%;display:grid;grid-template-rows:56px 1fr;align-items:center;justify-items:center;padding:26px 16px 18px;border:2px solid rgba(76,50,20,.30)}
+.node .icon{width:54px;height:44px;opacity:.72;background:linear-gradient(rgba(40,25,12,.70),rgba(40,25,12,.70)) center 8px/34px 28px no-repeat;clip-path:polygon(50% 0,90% 28%,80% 100%,20% 100%,10% 28%)}
+.node .text{font-size:26px;font-weight:700;line-height:1.12;color:#23170c}
+.node.small{width:155px;height:155px}
+.node.small .inner{width:124px;height:124px;grid-template-rows:43px 1fr;padding-top:22px}
+.node.small .text{font-size:22px}
+.node:hover,.node.active{transform:translate(-50%,-50%) scale(1.045)}
+.about{left:270px;top:285px}.intern1{left:685px;top:600px}.intern2{left:1030px;top:245px}.intern3{left:1390px;top:545px}.result{left:1580px;top:825px}.project{left:1010px;top:920px}.aiworks{left:520px;top:920px}
+.top-ui{position:absolute;z-index:25;left:26px;top:22px;display:flex;align-items:center;gap:12px;color:rgba(255,252,232,.9);pointer-events:none}
+.profile-mark{width:54px;height:54px;border-radius:50%;background:rgba(24,29,39,.55);display:grid;place-items:center}
+.profile-copy strong{display:block;font-size:18px;letter-spacing:2px}
+.profile-copy span{font-size:12px;color:rgba(255,252,232,.68)}
+.drawer{position:absolute;z-index:40;top:0;right:0;width:var(--drawer);height:100vh;padding:32px clamp(28px,5vw,76px) 92px;color:#f2ead6;background:linear-gradient(135deg,rgba(18,23,32,.96),rgba(31,28,23,.92));border-left:1px solid rgba(199,213,232,.36);box-shadow:-30px 0 90px rgba(19,15,11,.52);transform:translateX(100%);transition:transform .55s ease;overflow:hidden}
+.app.detail-open .drawer{transform:translateX(0)}
+.drawer-scroll{height:100%;overflow:auto;padding-right:8px}
+.drawer-head{display:flex;justify-content:space-between;gap:22px;border-bottom:1px solid rgba(199,213,232,.28);padding-bottom:20px}
+.kicker{margin:0 0 9px;color:var(--cold);font-size:13px;letter-spacing:2px}
+.drawer h2{margin:0;color:#fff3d5;font-size:clamp(30px,4vw,58px);line-height:1.1}
+.summary{margin:14px 0 0;max-width:760px;color:rgba(242,234,214,.72);font-size:15px;line-height:1.8}
+.close{width:38px;height:38px;border:1px solid rgba(199,213,232,.38);border-radius:7px;color:#f2ead6;background:rgba(255,255,255,.04);cursor:pointer}
+.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.detail-grid.triple-layout{grid-template-columns:repeat(3,minmax(0,1fr))}
+.block{min-height:118px;padding:16px;border:1px solid rgba(199,213,232,.22);border-radius:8px;background:rgba(20,24,33,.42)}
+.block.wide{grid-column:1/-1}
+.block h3{margin:0 0 10px;color:#e5d7b8;font-size:16px}
+.block p,.block li{margin:0;color:rgba(242,234,214,.74);font-size:14px;line-height:1.8}
+.block ul{margin:0;padding-left:1.15em}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.tag{padding:5px 9px;border:1px solid rgba(199,213,232,.34);border-radius:999px;background:rgba(199,213,232,.10);font-size:12px}
+.identity{margin-top:20px;padding:18px;border:1px solid rgba(199,213,232,.22);border-radius:8px;background:rgba(20,24,33,.42)}
+.identity h3{margin:0 0 10px;color:#fff3d5;font-size:30px}
+.identity p{margin:7px 0;color:rgba(242,234,214,.78);line-height:1.7;font-size:15px}
+.edu-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.edu-item strong{display:block;color:#fff3d5;margin-bottom:6px}
+.edu-item span{display:block;color:rgba(242,234,214,.74);line-height:1.7;font-size:14px}
+.project-hero{display:grid;grid-template-columns:minmax(240px,360px) 1fr;gap:18px;margin-top:20px}
+.xhs-shot{border:1px solid rgba(199,213,232,.28);border-radius:8px;overflow:hidden;background:rgba(255,255,255,.05)}
+.xhs-shot img{display:block;width:100%;height:100%;object-fit:cover}
+.project-intro{padding:18px;border:1px solid rgba(199,213,232,.22);border-radius:8px;background:rgba(20,24,33,.42)}
+.project-intro h3{margin:0 0 10px;color:#fff3d5;font-size:24px}
+.project-intro p{margin:8px 0;color:rgba(242,234,214,.76);font-size:14px;line-height:1.8}
+.project-link{display:inline-flex;margin-top:10px;padding:7px 10px;border:1px solid rgba(199,213,232,.34);border-radius:999px;color:#f2ead6;text-decoration:none;background:rgba(199,213,232,.10);font-size:12px}
+.project-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.result-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.gallery-item{display:grid;gap:8px;margin:0}
+.gallery-item img{width:100%;display:block;aspect-ratio:3/4;object-fit:cover;border-radius:8px;border:1px solid rgba(199,213,232,.22);background:rgba(255,255,255,.04)}
+.result-gallery .gallery-item img{aspect-ratio:9/16}
+.collaborator-gallery{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.collaborator-gallery .gallery-item img{aspect-ratio:auto;height:220px;object-fit:contain;padding:6px;box-sizing:border-box;background:rgba(255,255,255,.92)}
+.video-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.video-item{display:grid;gap:8px;margin:0}
+.video-item video{width:100%;display:block;aspect-ratio:16/9;object-fit:contain;border-radius:8px;border:1px solid rgba(199,213,232,.22);background:#05070b}
+.storyboard-gallery .gallery-item img{aspect-ratio:auto;max-height:720px;object-fit:contain;padding:6px;box-sizing:border-box;background:rgba(255,255,255,.92)}
+.gallery-item span,.video-item span{color:rgba(242,234,214,.68);font-size:12px}
+.bottom-nav{position:absolute;z-index:45;left:0;right:0;bottom:0;height:66px;display:grid;grid-template-columns:150px 1fr 220px 64px;align-items:center;border-top:1px solid rgba(59,35,14,.20);background:rgba(239,228,212,.78)}
+.nav-label,.progress{height:100%;display:grid;align-content:center;padding:0 20px;border-right:1px solid rgba(59,35,14,.16);font-size:13px;font-weight:700;color:rgba(35,24,15,.78)}
+.progress span{display:block;margin-top:4px;font-size:12px}
+.track{position:relative;height:100%;background:repeating-linear-gradient(90deg,transparent 0 34px,rgba(59,35,14,.18) 35px 37px,transparent 37px 68px);border-right:1px solid rgba(59,35,14,.16)}
+.track-fill{position:absolute;left:0;top:0;bottom:0;width:14.28%;background:linear-gradient(90deg,rgba(199,213,232,.34),rgba(239,228,212,.42));transition:width .24s ease}
+.nav-buttons{display:flex;align-items:center;justify-content:center;gap:8px;height:100%}
+.nav-buttons button{width:34px;height:34px;border:1px solid rgba(59,35,14,.22);border-radius:6px;background:rgba(255,255,245,.36);cursor:pointer;font-size:20px}
+@media(max-width:980px){
+  :root{--drawer:100vw}
+  .app.detail-open .map-viewport{width:0}
+  .map-world{width:1650px;height:990px}
+  .drawer{padding:24px 18px 84px}
+  .detail-grid,.detail-grid.triple-layout,.edu-row,.project-hero,.project-gallery,.result-gallery{grid-template-columns:1fr}
+  .bottom-nav{grid-template-columns:1fr 120px 64px}
+  .nav-label{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="map-viewport" id="viewport">
+    <div class="map-world" id="world">
+      <div class="map-paper">
+        <svg class="map-lines" viewBox="0 0 2100 1260" aria-hidden="true">
+          <path class="coast" d="M180 500 C260 210 585 170 720 330 C820 450 1020 305 1170 255 C1375 190 1520 315 1510 480 C1500 610 1700 590 1810 710 C1955 870 1790 1090 1590 1015 C1415 950 1325 1145 1125 1065 C935 990 810 1190 620 1015 C500 905 315 1005 235 860 C165 735 115 645 180 500 Z"/>
+          <path class="coast-thin" d="M228 490 C340 250 560 250 685 390 C790 505 990 372 1178 315 C1350 265 1450 370 1438 498 C1425 632 1640 638 1740 742 C1840 845 1730 985 1580 940 C1410 890 1325 1075 1140 995 C930 905 840 1098 658 938 C530 827 342 920 286 790 C230 660 188 598 228 490 Z"/>
+          <path class="route" d="M270 285 C420 430 535 490 685 600 C820 705 885 852 1010 920 C1125 785 1235 655 1390 545 C1290 435 1188 342 1030 245 C1210 275 1380 315 1510 455 C1590 560 1595 675 1580 825"/>
+          <path class="sketch" d="M910 360 l70-120 l82 120 M995 370 l45-76 l49 76 M1115 352 l56-92 l68 92"/>
+        </svg>
+
+        <div class="map-title">XIA XUE</div>
+        <div class="region-label r1">INTERNSHIP</div>
+        <div class="region-label r2">PROJECTS</div>
+        <div class="region-label r3">SHOWCASE</div>
+        <div class="region-label r4">AI WORKS</div>
+
+        <button class="node about" data-id="about"><span class="inner"><span class="icon"></span><span class="text">关于我</span></span></button>
+        <button class="node small intern1" data-id="intern1"><span class="inner"><span class="icon"></span><span class="text">实习经历1</span></span></button>
+        <button class="node small intern2" data-id="intern2"><span class="inner"><span class="icon"></span><span class="text">实习经历2</span></span></button>
+        <button class="node small intern3" data-id="intern3"><span class="inner"><span class="icon"></span><span class="text">实习经历3</span></span></button>
+        <button class="node result" data-id="result"><span class="inner"><span class="icon"></span><span class="text">实习成果展示</span></span></button>
+        <button class="node project" data-id="project"><span class="inner"><span class="icon"></span><span class="text">项目经历</span></span></button>
+        <button class="node aiworks" data-id="aiworks"><span class="inner"><span class="icon"></span><span class="text">AI作品展示</span></span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="top-ui">
+    <div class="profile-mark">夏</div>
+    <div class="profile-copy"><strong>雪の个人地图</strong><span>Drag the map - Discover archive nodes</span></div>
+  </div>
+
+  <aside class="drawer" id="drawer">
+    <div class="drawer-scroll">
+      <div class="drawer-head">
+        <div>
+          <p class="kicker" id="kicker">Archive Node</p>
+          <h2 id="title">关于我</h2>
+          <p class="summary" id="summary"></p>
+        </div>
+        <button class="close" id="close">×</button>
+      </div>
+      <div id="aboutContent"></div>
+      <div id="projectContent"></div>
+      <div class="detail-grid" id="detail"></div>
+    </div>
+  </aside>
+
+  <nav class="bottom-nav">
+    <div class="nav-label" id="navLabel">当前：关于我</div>
+    <div class="track"><div class="track-fill" id="trackFill"></div></div>
+    <div class="progress">PROGRESS <span id="progressText">14%</span></div>
+    <div class="nav-buttons">
+      <button id="prev">‹</button>
+      <button id="next">›</button>
+    </div>
+  </nav>
+</div>
+
+<script>
+const pages = {
+  about: {
+    kicker: "PERSONAL ARCHIVE",
+    title: "关于我",
+    summary: "夏雪的个人信息、教育背景、证书与技能。",
+    about: true
+  },
+  intern1: {
+    kicker: "INTERNSHIP I",
+    title: "内容运营",
+    summary: "2025.02 - 2025.06",
+    layout: "triple",
+    blocks: [
+      { h: "创作者运营", p: "通过投稿引导、内容答疑、活动宣传，邀请作者发布内容，并进行流量和资金扶持。社群每日有效信息 100+，新入驻作者首月粉丝新增 1w+。" },
+      { h: "内容增长", p: "0-1 搭建话题，调研竞品平台内容生态和奖励机制，输出旅行话题方案，首发内容 40+。" },
+      { h: "数据复盘", p: "跟踪内容表现，识别优质和潜力内容进行推流，持续优化内容分发策略，上线前 3 天参与量 1w+。" }
+    ]
+  },
+  intern2: {
+    kicker: "INTERNSHIP II",
+    title: "KOL推广",
+    summary: "2024.08 - 2024.12",
+    layout: "triple",
+    blocks: [
+      { h: "推广资源匹配", p: "根据游戏 IP 拆解推广 Brief，筛选合适的 KOL/MCN 资源，结合达人内容风格、粉丝画像、历史数据表现完成初筛与推荐，累计维护资源 400+。" },
+      { h: "内容共创与审核", p: "参与达人团队从视频选题、内容生产到发布全流程，结合游戏宣传点、用户偏好、平台风格进行审核，负责内容 20+，视频播放量 10w-100w。" },
+      { h: "项目流程整理", p: "负责达人排期跟进和交付管理，整理达人合作 SOP，确保环节高效推进，提升执行效率。" }
+    ]
+  },
+  intern3: {
+    kicker: "INTERNSHIP III",
+    title: "品牌宣传",
+    summary: "北京国枫律师事务所 | 2024.03 - 2024.06",
+    layout: "triple",
+    blocks: [
+      { h: "新媒体运营", p: "独立运营公众号及小红书账号，完成选题策划、文案撰写、视觉排版、内容发布与传播跟踪，累计发布推文 120+，平均阅读量 1000+。" },
+      { h: "活动执行", p: "协同法律团队、设计团队推动直播、专著发布、高校宣讲等线上线下活动，完成宣传物料制作 30+，高校宣讲海报转发量 50+。" }
+    ]
+  },
+  result: {
+    kicker: "INTERNSHIP RESULTS",
+    title: "实习成果展示",
+    summary: "合作达人（部分）与推广视频（部分）截图。",
+    blocks: [
+      {
+        h: "合作达人（部分）",
+        wide: true,
+        images: [
+          { src: "网页的图片/合作达人1.png", alt: "合作达人截图 01", caption: "合作达人 01" },
+          { src: "网页的图片/合作达人2.png", alt: "合作达人截图 02", caption: "合作达人 02" },
+          { src: "网页的图片/合作达人3.png", alt: "合作达人截图 03", caption: "合作达人 03" },
+          { src: "网页的图片/合作达人4.png", alt: "合作达人截图 04", caption: "合作达人 04" },
+          { src: "网页的图片/合作达人5.png", alt: "合作达人截图 05", caption: "合作达人 05" },
+          { src: "网页的图片/合作达人6.png", alt: "合作达人截图 06", caption: "合作达人 06" },
+          { src: "网页的图片/合作达人7.png", alt: "合作达人截图 07", caption: "合作达人 07" }
+        ],
+        galleryClass: "result-gallery collaborator-gallery"
+      },
+      {
+        h: "推广视频（部分）",
+        p: "以下为部分推广视频截图，覆盖光遇、第五人格、率土之滨、世界之外、一梦江湖、决战平安京、时空中的绘旅人等案例。",
+        wide: true,
+        images: [
+          { src: "网页的图片/光遇.png", alt: "推广视频截图 01", caption: "推广视频 01" },
+          { src: "网页的图片/第五人格1.png", alt: "推广视频截图 02", caption: "推广视频 02" },
+          { src: "网页的图片/第五人格2.png", alt: "推广视频截图 03", caption: "推广视频 03" },
+          { src: "网页的图片/第五人格3.png", alt: "推广视频截图 04", caption: "推广视频 04" },
+          { src: "网页的图片/率土之滨.png", alt: "推广视频截图 05", caption: "推广视频 05" },
+          { src: "网页的图片/世界之外1.png", alt: "推广视频截图 06", caption: "推广视频 06" },
+          { src: "网页的图片/世界之外2.png", alt: "推广视频截图 07", caption: "推广视频 07" },
+          { src: "网页的图片/一梦江湖.png", alt: "推广视频截图 08", caption: "推广视频 08" },
+          { src: "网页的图片/决战平安京.png", alt: "推广视频截图 09", caption: "推广视频 09" },
+          { src: "网页的图片/时空中的绘旅人.png", alt: "推广视频截图 10", caption: "推广视频 10" }
+        ],
+        galleryClass: "result-gallery"
+      }
+    ]
+  },
+  project: {
+    kicker: "PROJECT ARCHIVE",
+    title: "个人自媒体账号运营（小红书）",
+    summary: "2024 - 至今",
+    project: true
+  },
+  aiworks: {
+    kicker: "AI WORKS",
+    title: "AI作品展示",
+    summary: "AIGC 视频作品与分镜展示。",
+    blocks: [
+      {
+        h: "AIGC视频1",
+        p: "AIGC 视频作品展示。",
+        wide: true,
+        videos: [
+          { src: "网页的图片/视频1.mp4", caption: "AIGC视频1" }
+        ]
+      },
+      {
+        h: "AIGC视频2",
+        p: "AIGC 视频作品展示。",
+        wide: true,
+        videos: [
+          { src: "网页的图片/视频2.mp4", caption: "AIGC视频2" }
+        ]
+      },
+      {
+        h: "AIGC视频2分镜",
+        p: "AIGC视频2 的分镜设计图。",
+        wide: true,
+        images: [
+          { src: "网页的图片/视频2分镜.png", alt: "AIGC视频2分镜", caption: "AIGC视频2分镜" }
+        ],
+        galleryClass: "project-gallery storyboard-gallery"
+      }
+    ]
+  }
+};
+
+const order = ["about","intern1","intern2","intern3","result","project","aiworks"];
+const app = document.getElementById("app");
+const viewport = document.getElementById("viewport");
+const world = document.getElementById("world");
+const detail = document.getElementById("detail");
+const aboutContent = document.getElementById("aboutContent");
+const projectContent = document.getElementById("projectContent");
+const nodes = [...document.querySelectorAll(".node")];
+const titleEl = document.getElementById("title");
+const summaryEl = document.getElementById("summary");
+const kickerEl = document.getElementById("kicker");
+const navLabel = document.getElementById("navLabel");
+const progressText = document.getElementById("progressText");
+const trackFill = document.getElementById("trackFill");
+
+let active = "about";
+let scale = innerWidth < 980 ? .72 : .83;
+let offset = {x:-40, y:-5};
+let drag = null;
+
+function setWorldTransform(){
+  world.style.transform = `translate(calc(-50% + ${offset.x}px),calc(-50% + ${offset.y}px)) scale(${scale})`;
+}
+
+function makeBlock(block){
+  const el = document.createElement("section");
+  el.className = `block${block.wide ? " wide" : ""}`;
+
+  const h = document.createElement("h3");
+  h.textContent = block.h;
+  el.appendChild(h);
+
+  if (block.p){
+    const p = document.createElement("p");
+    p.textContent = block.p;
+    el.appendChild(p);
+  }
+
+  if (block.list){
+    const ul = document.createElement("ul");
+    block.list.forEach(item => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      ul.appendChild(li);
+    });
+    el.appendChild(ul);
+  }
+
+  if (block.tags){
+    const tags = document.createElement("div");
+    tags.className = "tags";
+    block.tags.forEach(item => {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = item;
+      tags.appendChild(tag);
+    });
+    el.appendChild(tags);
+  }
+
+  if (block.videos){
+    const gallery = document.createElement("div");
+    gallery.className = block.videoClass || "video-gallery";
+    block.videos.forEach(item => {
+      const figure = document.createElement("figure");
+      figure.className = "video-item";
+      const video = document.createElement("video");
+      video.src = item.src;
+      video.controls = true;
+      video.preload = "metadata";
+      video.playsInline = true;
+      const cap = document.createElement("span");
+      cap.textContent = item.caption;
+      figure.append(video, cap);
+      gallery.appendChild(figure);
+    });
+    el.appendChild(gallery);
+  }
+
+  if (block.images){
+    const gallery = document.createElement("div");
+    gallery.className = block.galleryClass || "project-gallery";
+    block.images.forEach(item => {
+      const figure = document.createElement("figure");
+      figure.className = "gallery-item";
+      const img = document.createElement("img");
+      img.src = item.src;
+      img.alt = item.alt;
+      img.loading = "lazy";
+      const cap = document.createElement("span");
+      cap.textContent = item.caption;
+      figure.append(img, cap);
+      gallery.appendChild(figure);
+    });
+    el.appendChild(gallery);
+  }
+
+  return el;
+}
+
+function renderAbout(){
+  aboutContent.innerHTML = `
+    <div class="identity">
+      <h3>夏雪</h3>
+      <p>格拉斯哥大学 - 创意产业与文化政策（在读）</p>
+      <p>电话 13063311868 | 邮箱 1262994915@qq.com</p>
+      <p>政治面貌：共青团员（入党积极分子） | 2002.02.13</p>
+    </div>
+    <div class="detail-grid">
+      <section class="block wide">
+        <h3>教育背景</h3>
+        <div class="edu-row">
+          <div class="edu-item">
+            <strong>格拉斯哥大学</strong>
+            <span>创意产业与文化政策 - 硕士在读</span>
+            <span>2025.09-2026.12</span>
+          </div>
+          <div class="edu-item">
+            <strong>北京服装学院</strong>
+            <span>传播学 - 本科 GPA 3.6/4 - 均分 88</span>
+            <span>2021.09-2025.06</span>
+          </div>
+        </div>
+      </section>
+      <section class="block">
+        <h3>证书</h3>
+        <ul>
+          <li>英语六级</li>
+          <li>雅思</li>
+          <li>2024 校人民奖学金二等奖</li>
+          <li>2024 大广赛北京赛区二等奖</li>
+        </ul>
+      </section>
+      <section class="block">
+        <h3>技能</h3>
+        <ul>
+          <li>PPT</li>
+          <li>Excel 数据整理与可视化</li>
+          <li>ChatGPT、Claude 等 AIGC 工具</li>
+        </ul>
+      </section>
+    </div>
+  `;
+}
+
+function renderProject(){
+  projectContent.innerHTML = `
+    <div class="project-hero">
+      <div class="xhs-shot">
+        <img src="网页的图片/小红书主页.png" alt="小红书主页截图">
+      </div>
+      <div class="project-intro">
+        <h3>账号信息</h3>
+        <p>账号名：舒薇薇</p>
+        <p>ID：sxh030519</p>
+        <p>粉丝 1.1 W，获赞与收藏 12.4 W</p>
+        <p>定位：探店 / 拍照 / 旅行 / 分享</p>
+        <a class="project-link" href="https://www.xiaohongshu.com/user/profile/5ec0e5a4000000000100414c" target="_blank" rel="noreferrer">打开小红书主页</a>
+      </div>
+    </div>
+    <div class="detail-grid">
+      <section class="block"><h3>用户洞察</h3><p>聚焦美食与探店领域，基于评论区反馈、私信咨询、热门话题、同类账号表现，持续优化内容结构。</p></section>
+      <section class="block"><h3>内容种草</h3><p>建立选题、内容发布、数据观察、复盘调整的运营闭环，提升内容点击率、收藏率与互动率。</p></section>
+      <section class="block"><h3>案例沉淀</h3><p>复盘高互动笔记特征，总结探店类内容 SOP，并持续复制到后续选题中。</p></section>
+      <section class="block"><h3>数据跟踪</h3><p>通过评论回复、私信反馈收集用户需求，围绕高频关注问题补充内容信息，提升粉丝黏性与账号信任度，形成稳定内容生态。</p></section>
+    </div>
+  `;
+}
+
+function openNode(id, open = true){
+  active = id;
+  const page = pages[id];
+  const index = order.indexOf(id);
+  const percent = Math.round((index + 1) / order.length * 100);
+
+  nodes.forEach(node => node.classList.toggle("active", node.dataset.id === id));
+  kickerEl.textContent = page.kicker;
+  titleEl.textContent = page.title;
+  summaryEl.textContent = page.summary;
+  navLabel.textContent = `当前：${page.title}`;
+  progressText.textContent = `${percent}%`;
+  trackFill.style.width = `${percent}%`;
+
+  aboutContent.innerHTML = "";
+  projectContent.innerHTML = "";
+  detail.innerHTML = "";
+
+  if (page.about){
+    detail.style.display = "none";
+    renderAbout();
+  } else if (page.project){
+    detail.style.display = "none";
+    renderProject();
+  } else {
+    detail.style.display = "grid";
+    detail.className = page.layout === "triple" ? "detail-grid triple-layout" : "detail-grid";
+    detail.replaceChildren(...page.blocks.map(makeBlock));
+  }
+
+  if (open) app.classList.add("detail-open");
+}
+
+function step(direction){
+  const next = (order.indexOf(active) + direction + order.length) % order.length;
+  openNode(order[next], true);
+}
+
+viewport.addEventListener("pointerdown", event => {
+  if (event.target.closest("button")) return;
+  drag = { pointerId:event.pointerId, startX:event.clientX, startY:event.clientY, baseX:offset.x, baseY:offset.y };
+  viewport.setPointerCapture(event.pointerId);
+  viewport.classList.add("dragging");
+});
+
+viewport.addEventListener("pointermove", event => {
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  offset.x = drag.baseX + event.clientX - drag.startX;
+  offset.y = drag.baseY + event.clientY - drag.startY;
+  setWorldTransform();
+});
+
+function endDrag(event){
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  drag = null;
+  viewport.classList.remove("dragging");
+}
+
+viewport.addEventListener("pointerup", endDrag);
+viewport.addEventListener("pointercancel", endDrag);
+nodes.forEach(node => node.addEventListener("click", () => openNode(node.dataset.id, true)));
+document.getElementById("close").addEventListener("click", () => app.classList.remove("detail-open"));
+document.getElementById("prev").addEventListener("click", () => step(-1));
+document.getElementById("next").addEventListener("click", () => step(1));
+
+addEventListener("keydown", event => {
+  if (event.key === "Escape") app.classList.remove("detail-open");
+  if (event.key === "ArrowLeft") step(-1);
+  if (event.key === "ArrowRight") step(1);
+});
+
+addEventListener("resize", () => {
+  scale = innerWidth < 980 ? .72 : .83;
+  setWorldTransform();
+});
+
+setWorldTransform();
+openNode("about", false);
+</script>
+</body>
+</html>
+```
